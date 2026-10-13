@@ -263,7 +263,8 @@ struct TensorEvaluator<const TensorShufflingOp<Shuffle, ArgType>, Device> {
     // benchmarks, add benchmarks that are representative of real workloads.
     using BlockRequirements = internal::TensorBlockResourceRequirements;
     if (inner_dim_shuffled) {
-      return BlockRequirements::uniform<Scalar>(target_size).addCostPerCoeff({0, 0, NumDims * 28});
+      return BlockRequirements::uniform<Scalar>(target_size / PacketSize)
+          .addCostPerCoeff(TensorOpCost(sizeof(Scalar), 0, NumDims, PacketAccess, PacketSize));
     } else {
       return BlockRequirements::skewed<Scalar>(target_size);
     }
@@ -296,8 +297,7 @@ struct TensorEvaluator<const TensorShufflingOp<Shuffle, ArgType>, Device> {
                                     ? TensorOpCost::AddCost<Index>()
                                     : NumDims * (2 * TensorOpCost::AddCost<Index>() +
                                                  2 * TensorOpCost::MulCost<Index>() + TensorOpCost::DivCost<Index>());
-    return m_impl.costPerCoeff(vectorized) +
-           TensorOpCost(0, 0, compute_cost, m_is_identity /* vectorized */, PacketSize);
+    return m_impl.costPerCoeff(vectorized) + TensorOpCost(0, 0, compute_cost, vectorized, PacketSize);
   }
 
   EIGEN_DEVICE_FUNC typename Storage::Type data() const { return nullptr; }
